@@ -1,0 +1,57 @@
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - scraper-network
+
+  scraper:
+    build: .
+    volumes:
+      - ./app:/app
+      - ./data:/data
+    depends_on:
+      - redis
+      - selenium
+    networks:
+      - scraper-network
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - SELENIUM_HOST=selenium
+      - PLATFORM=instagram  # veya twitter, facebook, vb.
+      - USERNAME=your_username
+      - PASSWORD=your_password
+
+  celery_worker:
+    build: .
+    command: celery -A app.tasks worker --loglevel=info
+    volumes:
+      - ./app:/app
+      - ./data:/data
+    depends_on:
+      - redis
+      - selenium
+    networks:
+      - scraper-network
+    environment:
+      - REDIS_HOST=redis
+      - SELENIUM_HOST=selenium
+
+  selenium:
+    image: selenium/standalone-chrome:latest
+    ports:
+      - "4444:4444"
+    networks:
+      - scraper-network
+    environment:
+      - SE_NODE_MAX_SESSIONS=10
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+    shm_size: 2g
+
+networks:
+  scraper-network:
+    driver: bridge
