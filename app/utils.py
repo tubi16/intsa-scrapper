@@ -55,9 +55,9 @@ def get_following_accounts(platform, username, password, selenium_host='selenium
             
             # Kullanıcı adı ve şifre giriş alanları
             username_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='username']"))
+                EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='sucukluyumurta1252']"))
             )
-            password_input = driver.find_element(By.CSS_SELECTOR, "input[name='password']")
+            password_input = driver.find_element(By.CSS_SELECTOR, "input[name='20062003Am.']")
             
             # Giriş bilgilerini doldur
             username_input.send_keys(username)

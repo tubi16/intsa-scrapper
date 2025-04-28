@@ -8,8 +8,8 @@ SELENIUM_PORT = os.environ.get('SELENIUM_PORT', 4444)
 
 # Platform yapılandırması
 PLATFORM = os.environ.get('PLATFORM', 'instagram')
-USERNAME = os.environ.get('USERNAME', '')
-PASSWORD = os.environ.get('PASSWORD', '')
+USERNAME = os.environ.get('USERNAME', 'sucukluyumurta1252')
+PASSWORD = os.environ.get('PASSWORD', '20062003Am.')
 
 # Veri toplama yapılandırması
 MAX_ACCOUNTS = int(os.environ.get('MAX_ACCOUNTS', 100))

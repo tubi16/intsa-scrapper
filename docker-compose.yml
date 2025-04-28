@@ -1,7 +1,7 @@
-
 services:
   redis:
     image: redis:latest
+    pull_policy: always
     ports:
       - "6379:6379"
     networks:
@@ -43,6 +43,7 @@ services:
 
   selenium:
     image: selenium/standalone-chrome:latest
+    pull_policy: always
     ports:
       - "4444:4444"
     networks:
