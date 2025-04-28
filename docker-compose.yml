@@ -36,6 +36,10 @@ services:
       - REDIS_HOST=redis
       - SELENIUM_HOST=selenium
       - LOG_LEVEL=INFO
+      # Çevre değişkenlerini doğrudan tanımla
+      - USERNAME=sucukluyumurta1252
+      - PASSWORD=20062003Am.
+      - PLATFORM=instagram
     restart: on-failure
 
   celery_worker:
@@ -59,6 +63,10 @@ services:
       - REDIS_HOST=redis
       - SELENIUM_HOST=selenium
       - LOG_LEVEL=INFO
+      # Çevre değişkenlerini doğrudan tanımla
+      - USERNAME=sucukluyumurta1252
+      - PASSWORD=20062003Am.
+      - PLATFORM=instagram
     restart: on-failure
 
   selenium:

@@ -38,6 +38,8 @@ def get_following_accounts(platform, username, password, selenium_host='selenium
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_experimental_option('excludeSwitches', ['enable-automation'])
         options.add_experimental_option('useAutomationExtension', False)
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36')
         
         driver = webdriver.Remote(
             command_executor=f'http://{selenium_host}:4444/wd/hub',
@@ -50,6 +52,8 @@ def get_following_accounts(platform, username, password, selenium_host='selenium
         
         if platform == 'instagram':
             # Instagram'a giriş yap
+            driver.get('https://www.instagram.com/')
+            time.sleep(random.uniform(5, 8))  # Daha uzun bir bekleme
             driver.get('https://www.instagram.com/accounts/login/')
             time.sleep(random.uniform(3, 5))
             
