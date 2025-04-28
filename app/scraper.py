@@ -1,4 +1,5 @@
 import time
+import random
 import logging
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -25,11 +26,20 @@ class SocialMediaScraper:
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             
+            # Bot algılama mekanizmalarını atlatmak için
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option('excludeSwitches', ['enable-automation'])
+            options.add_experimental_option('useAutomationExtension', False)
+            
             self.driver = webdriver.Remote(
                 command_executor=f'http://{self.selenium_host}:4444/wd/hub',
                 options=options
             )
             self.driver.set_window_size(1920, 1080)
+            
+            # Bot algılamasını atlatmak için ek önlemler
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
             return True
         except Exception as e:
             logger.error(f"WebDriver başlatılırken hata oluştu: {str(e)}")
@@ -40,7 +50,8 @@ class SocialMediaScraper:
         try:
             if self.platform == 'instagram':
                 self.driver.get('https://www.instagram.com/accounts/login/')
-                time.sleep(2)  # Sayfanın yüklenmesi için bekle
+                # Rastgele bekleme süresi
+                time.sleep(random.uniform(3, 5))
                 
                 # Çerezleri kabul et (gerekirse)
                 try:
@@ -48,18 +59,20 @@ class SocialMediaScraper:
                         EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'Kabul Et')]"))
                     )
                     cookie_button.click()
+                    time.sleep(random.uniform(1, 2))
                 except:
                     logger.info("Çerez butonu bulunamadı, devam ediliyor.")
                 
                 # Kullanıcı adı ve şifre giriş alanları
                 username_input = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='sucukluyumurta1252']"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='username']"))
                 )
-                password_input = self.driver.find_element(By.CSS_SELECTOR, "input[name='20062003Am.']")
+                password_input = self.driver.find_element(By.CSS_SELECTOR, "input[name='password']")
                 
-                # Giriş bilgilerini doldur
-                username_input.send_keys(username)
-                password_input.send_keys(password)
+                # Giriş bilgilerini doğal şekilde gir
+                self._type_like_human(username_input, username)
+                time.sleep(random.uniform(0.5, 1.5))
+                self._type_like_human(password_input, password)
                 
                 # Giriş butonuna tıkla
                 login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
@@ -71,6 +84,17 @@ class SocialMediaScraper:
                         EC.presence_of_element_located((By.XPATH, "//a[contains(@href, '/direct/inbox/')]"))
                     )
                     logger.info("Instagram'a başarıyla giriş yapıldı.")
+                    
+                    # Olası "Şimdi Değil" veya bildirim popup'larını kapat
+                    try:
+                        not_now_button = WebDriverWait(self.driver, 5).until(
+                            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Not Now') or contains(text(), 'Şimdi Değil')]"))
+                        )
+                        not_now_button.click()
+                        time.sleep(random.uniform(1, 2))
+                    except:
+                        pass
+                    
                     return True
                 except TimeoutException:
                     logger.error("Instagram girişi başarısız oldu. Kullanıcı adı ve şifreyi kontrol edin.")
@@ -87,6 +111,12 @@ class SocialMediaScraper:
             logger.error(f"Giriş sırasında hata oluştu: {str(e)}")
             return False
     
+    def _type_like_human(self, element, text):
+        """İnsan gibi yazma simulasyonu - botların tespitini zorlaştırır"""
+        for character in text:
+            element.send_keys(character)
+            time.sleep(random.uniform(0.05, 0.2))  # Her karakter arasında rastgele gecikme
+    
     def get_user_posts(self, username, hours=24):
         """Belirtilen kullanıcının son 24 saatteki gönderilerini alır."""
         posts = []
@@ -94,22 +124,42 @@ class SocialMediaScraper:
             if self.platform == 'instagram':
                 # Kullanıcı profiline git
                 self.driver.get(f'https://www.instagram.com/{username}/')
-                time.sleep(3)  # Sayfanın yüklenmesi için bekle
+                time.sleep(random.uniform(3, 5))  # Sayfanın yüklenmesi için bekle
+                
+                # Profil bulunmadı veya gizli mi kontrol et
+                if "This Account is Private" in self.driver.page_source or "Sayfa Bulunamadı" in self.driver.page_source:
+                    logger.warning(f"{username} profili gizli veya mevcut değil, atlanıyor.")
+                    return posts
                 
                 # Son 24 saat için datetime hesapla
                 cutoff_time = datetime.now() - timedelta(hours=hours)
                 
-                # İlk 12 gönderiyi incele (varsayılan olarak bir sayfada görünen)
-                post_elements = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_all_elements_located((By.XPATH, "//article//a[contains(@href, '/p/')]"))
-                )
+                # Gönderileri bul - muhtemelen a[href] ile başlayan ve '/p/' içeren linkler
+                try:
+                    # Modern Instagram UI için
+                    post_elements = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_all_elements_located((By.XPATH, "//article//a[contains(@href, '/p/')]"))
+                    )
+                except:
+                    try:
+                        # Alternatif seçici dene
+                        post_elements = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_all_elements_located((By.XPATH, "//div[contains(@class, '_aabd')]//a"))
+                        )
+                    except:
+                        logger.warning(f"{username} için gönderi elementleri bulunamadı.")
+                        return posts
                 
-                # Her gönderinin bağlantısını al
-                post_links = [post.get_attribute('href') for post in post_elements[:12]]
+                # En fazla 12 gönderiyi incele (ayarlanabilir)
+                max_posts = min(12, len(post_elements))
+                post_links = [post.get_attribute('href') for post in post_elements[:max_posts]]
                 
                 for link in post_links:
+                    # Her gönderi arasında kısa bir bekleme
+                    time.sleep(random.uniform(2, 4))
+                    
                     self.driver.get(link)
-                    time.sleep(2)  # Gönderi sayfasının yüklenmesi için bekle
+                    time.sleep(random.uniform(3, 5))  # Gönderi sayfasının yüklenmesi için bekle
                     
                     try:
                         # Gönderi tarihini bul
@@ -124,11 +174,19 @@ class SocialMediaScraper:
                         
                         # Son 24 saat içinde mi kontrol et
                         if post_date >= cutoff_time:
-                            # Gönderi içeriğini al
-                            try:
-                                caption = self.driver.find_element(By.XPATH, "//div[contains(@class, '_a9zs')]").text
-                            except NoSuchElementException:
-                                caption = ""
+                            # Gönderi içeriğini al - birden fazla seçici dene
+                            caption = ""
+                            for selector in [
+                                "//div[contains(@class, '_a9zs')]",
+                                "//div[contains(@class, 'C4VMK')]//span",
+                                "//div[contains(@class, '_ac2a')]//span"
+                            ]:
+                                try:
+                                    caption_element = self.driver.find_element(By.XPATH, selector)
+                                    caption = caption_element.text
+                                    break
+                                except NoSuchElementException:
+                                    continue
                             
                             # Gönderi tipini kontrol et (fotoğraf veya video)
                             post_type = "photo"
@@ -138,11 +196,19 @@ class SocialMediaScraper:
                             except NoSuchElementException:
                                 pass
                             
-                            # Beğeni sayısını al
-                            try:
-                                likes = self.driver.find_element(By.XPATH, "//section//span/div").text
-                            except NoSuchElementException:
-                                likes = "0"
+                            # Beğeni sayısını al - birden fazla seçici dene
+                            likes = "0"
+                            for selector in [
+                                "//section//span/div",
+                                "//div[contains(@class, '_aacl')]//span",
+                                "//a[contains(@href, 'liked_by')]/span"
+                            ]:
+                                try:
+                                    likes_element = self.driver.find_element(By.XPATH, selector)
+                                    likes = likes_element.text
+                                    break
+                                except NoSuchElementException:
+                                    continue
                             
                             # Post verilerini kaydet
                             post_data = {
@@ -159,7 +225,7 @@ class SocialMediaScraper:
                             posts.append(post_data)
                             logger.info(f"Gönderi eklendi: {username} - {post_date}")
                         else:
-                            logger.info(f"Gönderi 24 saatten eski, atlanıyor: {username} - {post_date}")
+                            logger.info(f"Gönderi belirtilen süreden ({hours} saat) eski, atlanıyor: {username} - {post_date}")
                     
                     except Exception as e:
                         logger.error(f"Gönderi işlenirken hata oluştu: {str(e)}")

@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 def main():
     # Giriş bilgilerini çevre değişkenlerinden al
     platform = os.environ.get('PLATFORM', 'instagram')
-    username = os.environ.get('USERNAME')
-    password = os.environ.get('PASSWORD')
+    username = os.environ.get('INSTAGRAM_USERNAME')
+    password = os.environ.get('INSTAGRAM_PASSWORD')
     
     if not username or not password:
         logger.error("Kullanıcı adı veya şifre eksik! Çevre değişkenlerini kontrol edin.")
@@ -25,6 +25,10 @@ def main():
     logger.info(f"{platform} platformu için oturum açılıyor... Kullanıcı: {username}")
     
     try:
+        # Çevre değişkenlerinin doğru alındığını kontrol etmek için log
+        logger.info(f"Algılanan ortam değişkenleri: PLATFORM={platform}, USERNAME={username}")
+        logger.info(f"REDIS_HOST: {os.environ.get('REDIS_HOST', 'not set')}, SELENIUM_HOST: {os.environ.get('SELENIUM_HOST', 'not set')}")
+        
         # Takip edilen hesapları al
         accounts = get_following_accounts(platform, username, password)
         logger.info(f"Toplam {len(accounts)} takip edilen hesap bulundu.")

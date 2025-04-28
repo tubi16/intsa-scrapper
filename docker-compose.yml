@@ -1,20 +1,33 @@
+# docker-compose.yml
 services:
   redis:
     image: redis:latest
     pull_policy: always
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
     networks:
       - scraper-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   scraper:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     volumes:
-      - ./app:/app
-      - ./data:/data
+      - ./app:/app  # app klasörünü /app'e bağla
+      - ./data:/data  # data klasörünü /data'ya bağla
+    command: python main.py
     depends_on:
-      - redis
-      - selenium
+      redis:
+        condition: service_healthy
+      selenium:
+        condition: service_started
     networks:
       - scraper-network
     env_file:
@@ -22,37 +35,49 @@ services:
     environment:
       - REDIS_HOST=redis
       - SELENIUM_HOST=selenium
-      - PLATFORM=instagram  # veya twitter, facebook, vb.
-      - USERNAME=your_username
-      - PASSWORD=your_password
+      - LOG_LEVEL=INFO
+    restart: on-failure
 
   celery_worker:
-    build: .
-    command: celery -A app.tasks worker --loglevel=info
+    build: 
+      context: .
+      dockerfile: Dockerfile 
     volumes:
-      - ./app:/app
-      - ./data:/data
+      - ./app:/app  # app klasörünü /app'e bağla 
+      - ./data:/data  # data klasörünü /data'ya bağla
+    command: celery -A tasks worker --loglevel=info
     depends_on:
-      - redis
-      - selenium
+      redis:
+        condition: service_healthy
+      selenium:
+        condition: service_started
     networks:
       - scraper-network
+    env_file:
+      - .env
     environment:
       - REDIS_HOST=redis
       - SELENIUM_HOST=selenium
+      - LOG_LEVEL=INFO
+    restart: on-failure
 
   selenium:
     image: selenium/standalone-chrome:latest
     pull_policy: always
     ports:
       - "4444:4444"
+      - "7900:7900"  # VNC portu
     networks:
       - scraper-network
     environment:
       - SE_NODE_MAX_SESSIONS=10
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
     shm_size: 2g
+    restart: unless-stopped
 
 networks:
   scraper-network:
     driver: bridge
+
+volumes:
+  redis-data:

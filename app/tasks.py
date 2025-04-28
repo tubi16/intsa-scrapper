@@ -58,3 +58,7 @@ def scrape_user_posts(self, platform, username, login_username, login_password):
     finally:
         # Her durumda driver'ı kapat
         scraper.close()
+
+if __name__ == '__main__':
+    # Test için
+    app.start()
