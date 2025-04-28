@@ -64,8 +64,8 @@ services:
       - SELENIUM_HOST=selenium
       - LOG_LEVEL=INFO
       # Çevre değişkenlerini doğrudan tanımla
-      - USERNAME=sucukluyumurta1252
-      - PASSWORD=20062003Am.
+      - USERNAME=username
+      - PASSWORD=pass
       - PLATFORM=instagram
     restart: on-failure
 
